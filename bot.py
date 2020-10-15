@@ -1,7 +1,6 @@
 import discord
-from discord.ext import commands
 import os
-
+from discord.ext import commands
 from music import Music
 
 client = commands.Bot(command_prefix='chapri ')
@@ -17,7 +16,6 @@ async def pic(channel, file):
     
         
 token = os.environ['discord_token']
-# from config import token
 
 client.add_cog(Music(client))
 
