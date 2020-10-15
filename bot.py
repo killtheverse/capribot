@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import os
 
+from music import Music
+
 client = commands.Bot(command_prefix='.')
 
 @client.event
@@ -17,18 +19,9 @@ async def pic(channel, file):
 async def homie(channel):
     await channel.send(file=discord.File('images/homie.jpeg'))
     
-@client.command()
-async def lofi(context):
-    voice_channel = await join_voice(context)
-    voice_channel.play(discord.FFmpegOpusAudio("https://www.youtube.com/watch?v=5qap5aO4i9A"))
-
-@client.command()
-async def nightwave(context):
-    voice_channel = await join_voice(context)
-    voice_channel.play(discord.FFmpegOpusAudio("http://radio.plaza.one/opus"))
 
 @client.command(pass_context=True)
-async def stop(context):
+async def stop_radio(context):
     await leave_voice(context)
 
 @commands.command()
@@ -48,4 +41,7 @@ async def leave_voice(context):
         
 token = os.environ['discord_token']
 # from config import token
+
+client.add_cog(Music(client))
+
 client.run(token)
