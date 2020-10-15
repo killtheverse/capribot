@@ -15,11 +15,6 @@ async def pic(channel, file):
     filename = 'images/'+file+'.jpeg'
     await channel.send(file=discord.File(filename))
     
-@client.command()
-async def homie(channel):
-    await channel.send(file=discord.File('images/homie.jpeg'))
-    
-
 @client.command(pass_context=True)
 async def stop_radio(context):
     await leave_voice(context)
