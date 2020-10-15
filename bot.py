@@ -19,13 +19,13 @@ async def pic(channel, file):
 async def stop_radio(context):
     await leave_voice(context)
 
-@commands.command()
+@client.command()
 async def join_voice(context):
     connected = context.author.voice
     if connected:
         return await connected.channel.connect()
 
-@commands.command()
+@client.command()
 async def leave_voice(context):
     if connected := context.guild.voice_client:
         return await connected.disconnect()
