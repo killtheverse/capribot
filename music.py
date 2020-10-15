@@ -181,22 +181,23 @@ class SongQueue(asyncio.Queue):
         del self._queue[index]
 
 class Radio:
-    __slots__ = ('source', 'requester', 'audio', 'channel')
+    __slots__ = ('source', 'requester', 'audio', 'channel', 'title', 'url')
 
     def __init__(self, radio: str, ctx: commands.Context):
         self.source = radioList[radio]
-        url = self.source['url']
+        self.title = self.source['title']
+        self.url = self.source['url']
         if self.source['youtube']:
-            song_info = YTDLSource.ytdl.extract_info(url, download=False)
+            song_info = YTDLSource.ytdl.extract_info(self.url, download=False)
             self.audio = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song_info["formats"][0]["url"]), 0.5)
         else:
-            self.audio = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(url), 0.5)
+            self.audio = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(self.url), 0.5)
         self.requester = ctx.author
         self.channel = ctx.channel
 
     def create_embed(self):
         embed = (discord.Embed(title='Now playing',
-                               description='```css\n{0.source.title}\n```'.format(self),
+                               description='```css\n{0.title}\n```'.format(self),
                                color=discord.Color.blurple())
                  .add_field(name='Requested by', value=self.requester.mention)
                  .add_field(name='URL', value='[Click]({0.url})'.format(self)))
@@ -278,10 +279,9 @@ class VoiceState:
     def skip(self):
         self.skip_votes.clear()
 
-        if self.is_playing:
+        if self.is_playing or self.radio_mode:
             self.voice.stop()
-        elif self.radio_mode:
-            self.radio.stop()
+
 
     async def stop(self):
         self.songs.clear()
@@ -290,6 +290,7 @@ class VoiceState:
             await self.voice.disconnect()
             self.voice = None
             self.radio = None
+            
 
 class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -347,10 +348,10 @@ class Music(commands.Cog):
             return
 
         ctx.voice_state.voice = await destination.connect()
-
     @commands.command(name='leave', aliases=['disconnect'])
     @commands.has_permissions(manage_guild=True)
     async def _leave(self, ctx: commands.Context):
+
         """Clears the queue and leaves the voice channel."""
 
         if not ctx.voice_state.voice:
@@ -383,6 +384,8 @@ class Music(commands.Cog):
     async def _pause(self, ctx: commands.Context):
         """Pauses the currently playing song."""
 
+        if ctx.voice_state.radio_mode:
+            return await ctx.send("A radio cannot be paused, are you dumb? Remember when mom told you to pause an online game?")
         if not ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.message.add_reaction('⏯')
@@ -402,7 +405,7 @@ class Music(commands.Cog):
         """Stops playing song and clears the queue."""
 
         ctx.voice_state.songs.clear()
-
+        ctx.voice_state.radio = None
         if not (ctx.voice_state.is_playing or ctx.voice_state.radio_mode):
             ctx.voice_state.voice.stop()
             await ctx.message.add_reaction('⏹')
@@ -417,7 +420,8 @@ class Music(commands.Cog):
             return await ctx.send('Not playing any music right now...')
 
         voter = ctx.message.author
-        if voter == ctx.voice_state.current.requester:
+        current = ctx.voice_state.radio if ctx.voice_state.radio_mode else ctx.voice_state.current
+        if voter == current.requester:
             await ctx.message.add_reaction('⏭')
             ctx.voice_state.skip()
 
@@ -501,6 +505,9 @@ class Music(commands.Cog):
 
         if not ctx.voice_state.voice:
             await ctx.invoke(self._join)
+            
+        if ctx.voice_state.radio_mode:
+            return await ctx.send("Currently playing radio, use stop and try again")
 
         async with ctx.typing():
             try:
@@ -531,6 +538,9 @@ class Music(commands.Cog):
             
         if ctx.voice_state.is_playing:
             return await ctx.send('The bot is already playing music.')
+        
+        if ctx.voice_state.radio_mode:
+            return await ctx.send('Bot is already playing radio, stop and try again')
 
         if radio not in radioList.keys():
             return await ctx.send("""
