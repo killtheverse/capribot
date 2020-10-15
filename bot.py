@@ -1,7 +1,6 @@
 import discord
-from discord.ext import commands
 import os
-
+from discord.ext import commands
 from music import Music
 
 client = commands.Bot(command_prefix='.')
@@ -35,7 +34,6 @@ async def leave_voice(context):
     # return await context.send("I am not connected to any voice channel..")
         
 token = os.environ['discord_token']
-# from config import token
 
 client.add_cog(Music(client))
 
